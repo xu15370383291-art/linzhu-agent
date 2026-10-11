@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101719" />
+    <title>灵珠 · Agent 工作台</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-row">
+          <div class="brand-orb" aria-hidden="true"><span></span><i></i></div>
+          <div class="brand-copy"><strong>灵珠</strong><small>LOCAL INTELLIGENCE</small></div>
+          <button class="icon-button collapse-button" id="sidebar-toggle" aria-label="收起侧边栏" title="收起侧边栏">‹</button>
+        </div>
+
+        <button class="workspace-switcher" id="workspace-switcher" aria-haspopup="menu" aria-expanded="false">
+          <span class="workspace-glyph">P</span>
+          <span class="workspace-copy"><strong>Personal Agent</strong><small>D:\personal agent</small></span>
+          <span class="chevron">⌄</span>
+        </button>
+
+        <div class="sidebar-actions">
+          <button class="new-chat" type="button"><span class="plus">＋</span> 新建会话 <kbd>Ctrl K</kbd></button>
+          <button class="search-chat" type="button"><span class="search-icon"></span> 搜索会话 <kbd>Ctrl J</kbd></button>
+        </div>
+
+        <div class="session-section">
+          <div class="section-label"><span>最近会话</span><button class="icon-button tiny" aria-label="更多会话选项">···</button></div>
+          <button class="session-item active"><span class="session-mark running"></span><span class="session-title">检查会话保存逻辑</span><span class="session-time">现在</span></button>
+          <button class="session-item"><span class="session-mark"></span><span class="session-title">整理项目结构</span></button>
+          <button class="session-item"><span class="session-mark"></span><span class="session-title">模型连接与配置</span></button>
+          <button class="session-item"><span class="session-mark"></span><span class="session-title">WSL 沙箱状态检查</span></button>
+          <button class="session-item"><span class="session-mark"></span><span class="session-title">修复单元测试失败</span></button>
+          <button class="session-item"><span class="session-mark"></span><span class="session-title">对比两个实现方案</span></button>
+        </div>
+
+        <div class="sidebar-bottom">
+          <button class="nav-action" id="settings-button"><span class="settings-glyph">⚙</span> 设置 <span class="nav-shortcut">⌘ ,</span></button>
+          <div class="local-status"><span class="status-pulse"></span><span>本地运行</span><span class="status-separator"></span><span>安全环境已就绪</span></div>
+          <div class="profile-row"><span class="profile-avatar">林</span><span class="profile-name">本地用户</span><button class="icon-button tiny" aria-label="用户菜单">···</button></div>
+        </div>
+      </aside>
+
+      <main class="main-pane">
+        <canvas class="network-canvas" id="network-canvas" aria-hidden="true"></canvas>
+        <div class="ambient-system" aria-hidden="true">
+          <div class="core-halo halo-one"></div>
+          <div class="core-halo halo-two"></div>
+          <div class="core-orbit orbit-one"></div>
+          <div class="core-orbit orbit-two"></div>
+          <div class="core-orbit orbit-three"></div>
+          <div class="system-core"><span></span><i></i></div>
+          <div class="core-label"><span>灵珠核心</span><strong>ACTIVE</strong></div>
+        </div>
+        <div class="ambient-readout" aria-hidden="true">
+          <span class="readout-line"></span>
+          <span>NEURAL LINK</span><strong id="neural-readout">98.4%</strong>
+          <span class="readout-separator"></span>
+          <span>LATENCY</span><strong id="latency-readout">042 ms</strong>
+        </div>
+        <header class="topbar">
+          <div class="breadcrumb"><span class="crumb-muted">会话</span><span class="crumb-divider">/</span><strong>检查会话保存逻辑</strong><span class="unsaved-dot"></span></div>
+          <div class="topbar-right">
+            <button class="model-picker" id="model-picker" aria-haspopup="menu" aria-expanded="false"><span class="model-spark">✳</span><span class="model-name-label">GPT-4.1</span><span class="model-provider">OpenAI</span><span class="chevron">⌄</span></button>
+            <span class="topbar-divider"></span>
+            <button class="icon-button top-icon" id="execution-details" aria-label="打开执行详情" title="执行详情"><span class="activity-icon">◷</span></button>
+            <button class="icon-button top-icon" id="more-actions" aria-label="更多操作" title="更多操作">···</button>
+            <span class="window-divider"></span>
+            <button class="window-control" aria-label="最小化">−</button><button class="window-control" aria-label="最大化">□</button><button class="window-control close" aria-label="关闭">×</button>
+          </div>
+        </header>
+
+        <div class="runtime-strip">
+          <div class="runtime-state"><span class="runtime-pulse"></span><strong>灵珠运行时</strong><span>在线</span></div>
+          <span class="runtime-divider"></span>
+          <div class="runtime-detail"><span class="runtime-key">沙箱</span><strong>WSL2 已验证</strong></div>
+          <span class="runtime-divider runtime-optional"></span>
+          <div class="runtime-detail runtime-optional"><span class="runtime-key">连接</span><strong>流式传输中</strong></div>
+          <div class="runtime-spacer"></div>
+          <span class="turn-id">回合 <code>08:42:16</code></span>
+        </div>
+
+        <div class="conversation-scroll" id="conversation-scroll">
+          <div class="conversation-column" id="conversation-column" aria-live="polite"></div>
+        </div>
+      </main>
+
+      <aside class="review-panel" id="review-panel" aria-label="操作审批">
+        <div class="review-header"><div class="review-title-group"><div class="review-eyebrow"><span class="approval-pulse"></span>操作审批</div><h2>等待确认</h2></div><button class="icon-button panel-close" aria-label="收起检查面板" title="收起面板">×</button></div>
+        <div class="review-summary"><span class="summary-icon">✎</span><div><strong>灵珠请求修改文件</strong><span id="review-summary-detail">原型演示差异，不会写入真实文件</span></div></div>
+        <div class="file-heading"><div class="file-icon">JS</div><div class="file-path"><strong>sessions.js</strong><span>src /</span></div><span class="change-count">+8 <i>−3</i></span><button class="icon-button tiny" aria-label="文件选项">···</button></div>
+        <div class="diff-toolbar"><span>变更预览</span><button class="diff-view">统一视图 <span>⌄</span></button></div>
+        <div class="diff-code" aria-label="代码差异预览">
+          <div class="diff-hunk"><span>@@ -24,6 +24,11 @@</span></div>
+          <div class="code-line context"><span class="line-number">24</span><span class="line-number">24</span><span class="diff-sign"></span><code>async save(session) {</code></div>
+          <div class="code-line removed"><span class="line-number">25</span><span class="line-number"></span><span class="diff-sign">−</span><code>  await writeFile(target, data);</code></div>
+          <div class="code-line added"><span class="line-number"></span><span class="line-number">25</span><span class="diff-sign">+</span><code>  const temp = path.join(</code></div>
+          <div class="code-line added"><span class="line-number"></span><span class="line-number">26</span><span class="diff-sign">+</span><code>    this.dir, `${randomUUID()}.tmp`</code></div>
+          <div class="code-line added"><span class="line-number"></span><span class="line-number">27</span><span class="diff-sign">+</span><code>  );</code></div>
+          <div class="code-line context"><span class="line-number">26</span><span class="line-number">28</span><span class="diff-sign"></span><code>  await rename(temp, target);</code></div>
+          <div class="diff-hunk"><span>@@ -43,3 +48,7 @@</span></div>
+          <div class="code-line added"><span class="line-number"></span><span class="line-number">49</span><span class="diff-sign">+</span><code>  return session;</code></div>
+        </div>
+        <div class="review-explanation"><span class="explanation-mark">i</span><span>这是模拟差异；批准不会修改真实工作区。</span></div>
+        <div class="review-empty" id="review-empty" hidden>当前没有待确认的变更</div>
+        <div class="review-spacer"></div>
+        <div class="review-actions"><button class="reject-button" id="reject-change"><span>×</span>拒绝</button><button class="approve-button" id="approve-change"><span>✓</span>批准变更</button><div class="approval-footnote"><span class="lock-glyph">▣</span>批准仅对此次变更有效</div></div>
+      </aside>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <input id="attachment-input" type="file" multiple hidden>
+    <div class="floating-menu" id="workspace-menu" role="menu" hidden>
+      <div class="menu-caption">当前工作区</div>
+      <button type="button" role="menuitem" data-workspace="Personal Agent"><span class="menu-icon">P</span><span><strong>Personal Agent</strong><small>D:\\personal agent</small></span><span class="menu-check">✓</span></button>
+      <button type="button" role="menuitem" data-workspace="实验沙盒"><span class="menu-icon amber">E</span><span><strong>实验沙盒</strong><small>D:\\personal agent\\frontend\\workbench</small></span></button>
+      <div class="menu-divider"></div>
+      <button type="button" role="menuitem" data-action="workspace-settings"><span class="menu-glyph">⌘</span><span>管理工作区</span></button>
+    </div>
+    <div class="floating-menu model-menu" id="model-menu" role="menu" hidden>
+      <div class="menu-caption">模型连接</div>
+      <button type="button" role="menuitem" data-model="GPT-4.1" data-provider="OpenAI"><span class="model-dot cyan"></span><span><strong>GPT-4.1</strong><small>OpenAI · 流式 · 工具</small></span><span class="menu-check">✓</span></button>
+      <button type="button" role="menuitem" data-model="DeepSeek V3" data-provider="DeepSeek"><span class="model-dot violet"></span><span><strong>DeepSeek V3</strong><small>DeepSeek · 流式 · 工具</small></span></button>
+      <button type="button" role="menuitem" data-model="Qwen 2.5 72B" data-provider="Ollama"><span class="model-dot amber"></span><span><strong>Qwen 2.5 72B</strong><small>Ollama · 本地连接</small></span></button>
+      <div class="menu-divider"></div>
+      <button type="button" role="menuitem" data-action="open-model-settings"><span class="menu-glyph">⚙</span><span>管理模型连接</span></button>
+    </div>
+    <div class="floating-menu actions-menu" id="actions-menu" role="menu" hidden>
+      <button type="button" role="menuitem" data-action="rename-session"><span class="menu-glyph">T</span><span>重命名会话</span><kbd>R</kbd></button>
+      <button type="button" role="menuitem" data-action="export-session"><span class="menu-glyph">↓</span><span>导出当前会话</span></button>
+      <button type="button" role="menuitem" data-action="clear-session"><span class="menu-glyph danger-glyph">×</span><span>清空当前会话</span></button>
+    </div>
+    <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
+      <div class="settings-dialog-inner">
+        <div class="settings-heading"><div><span class="menu-caption">WORKSPACE SETTINGS</span><h2 id="settings-title">工作台设置</h2></div><button class="icon-button" id="settings-close" aria-label="关闭设置">×</button></div>
+        <div class="settings-section"><div><strong>界面行为</strong><span>让高频操作保持在当前工作区内</span></div>
+          <label class="setting-row"><span><strong>自动打开审批面板</strong><small>任务进入等待确认时展开右侧面板</small></span><input type="checkbox" id="setting-auto-review" checked><i class="setting-switch"></i></label>
+          <label class="setting-row"><span><strong>动态核心动画</strong><small>保留背景网络和灵珠核心的动态效果</small></span><input type="checkbox" id="setting-motion" checked><i class="setting-switch"></i></label>
+          <label class="setting-row"><span><strong>紧凑执行轨迹</strong><small>减少步骤之间的垂直间距</small></span><input type="checkbox" id="setting-compact"><i class="setting-switch"></i></label>
+        </div>
+        <div class="settings-section diagnostic-section"><div><strong>运行环境</strong><span>本地演示环境状态</span></div><div class="diagnostic-grid"><span>运行时<strong>在线</strong></span><span>沙箱<strong>WSL2 已验证</strong></span><span>会话<strong>本地保存</strong></span><span>版本<strong>prototype 0.4</strong></span></div></div>
+        <button class="settings-done" id="settings-done" type="button">完成</button>
+      </div>
+    </dialog>
+    <dialog class="details-dialog" id="details-dialog" aria-labelledby="details-title">
+      <div class="details-dialog-inner"><div class="settings-heading"><div><span class="menu-caption">RUN TELEMETRY</span><h2 id="details-title">执行详情</h2></div><button class="icon-button" id="details-close" aria-label="关闭执行详情">×</button></div><div class="telemetry-hero"><span class="telemetry-ring"><i></i></span><div><strong>灵珠运行时</strong><span>本地工作区 · 安全环境已就绪</span></div><b>在线</b></div><div class="telemetry-grid"><div><span>当前模型</span><strong id="telemetry-model">GPT-4.1</strong></div><div><span>响应延迟</span><strong id="telemetry-latency">042 ms</strong></div><div><span>上下文使用</span><strong id="telemetry-context">24%</strong></div><div><span>工具调用</span><strong>3 次</strong></div></div><div class="event-log"><div><span class="event-dot green"></span><span>工作区读取完成</span><time>刚刚</time></div><div><span class="event-dot amber"></span><span>等待一次性审批</span><time>刚刚</time></div><div><span class="event-dot cyan"></span><span>模型连接保持在线</span><time>持续中</time></div></div></div>
+    </dialog>
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title">
+      <form method="dialog" class="search-dialog-inner">
+        <div class="search-dialog-heading"><h2 id="search-title">搜索会话</h2><button class="icon-button" value="cancel" aria-label="关闭搜索">×</button></div>
+        <label class="search-field"><span class="search-icon"></span><input id="session-search" type="search" aria-label="按会话名称或内容搜索" placeholder="按会话名称或内容搜索" autocomplete="off" /></label>
+        <div class="search-results" id="search-results"></div>
+      </form>
+    </dialog>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10191b">
+  <title>扩展管理 · 灵珠工作台</title>
+  <link rel="stylesheet" href="/live.css">
+  <link rel="stylesheet" href="/extensions.css">
+  <script src="/extensions.js" defer></script>
+</head>
+<body class="extensions-body">
+  <div class="extensions-shell">
+    <aside class="extensions-sidebar" id="extensions-sidebar">
+      <div class="extensions-brand"><a href="/" class="brand-orb" aria-label="返回工作台"><span></span><i></i></a><div><strong>灵珠</strong><small>扩展管理</small></div><button class="mobile-sidebar-close" id="sidebar-close" aria-label="关闭导航">×</button></div>
+      <div class="module-heading"><span>自定义</span><button id="sidebar-search-toggle" title="搜索已安装条目" aria-label="搜索已安装条目">⌕</button></div>
+      <nav class="extension-nav" aria-label="扩展类型"><a href="/extensions/plugins" data-nav="plugin"><span aria-hidden="true">◈</span>插件</a><a href="/extensions/skills" data-nav="skill"><span aria-hidden="true">◇</span>技能</a></nav>
+      <section class="installed-section"><div class="installed-heading"><span>已安装</span><span id="installed-count">0</span></div><input id="installed-search" type="search" placeholder="搜索已安装" aria-label="搜索已安装条目" hidden><div id="installed-list" class="installed-list"><p class="sidebar-empty">尚未安装任何条目</p></div></section>
+      <div class="extensions-sidebar-foot"><span class="dot"></span>本地管理数据</div>
+    </aside>
+    <button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="关闭导航" hidden></button>
+    <main class="extensions-main" id="extensions-main">
+      <header class="extensions-mobile-bar"><button id="sidebar-open" aria-label="打开导航">☰</button><span>扩展管理</span><a href="/" aria-label="返回工作台">工作台</a></header>
+      <div id="extensions-view" class="extensions-view" aria-live="polite"><div class="extensions-loading">正在读取扩展数据…</div></div>
+    </main>
+  </div>
+  <dialog id="add-menu" class="extensions-menu-dialog"><form method="dialog"><div class="dialog-head"><h2>添加到项目技能库</h2><button value="cancel" aria-label="关闭">×</button></div><p>技能保存在当前项目中，可供该项目下的所有会话使用。</p><div class="add-menu-actions"><button type="button" data-create="plugin"><span>＋</span><span><strong>新建个人插件</strong><small>保存基本信息，不连接外部服务</small></span></button><button type="button" data-create="skill"><span>＋</span><span><strong>新建个人技能</strong><small>保存到当前项目</small></span></button><button type="button" id="import-trigger"><span>↥</span><span><strong>导入技能 JSON</strong><small>版本化 JSON 格式</small></span></button><button type="button" id="import-pack-trigger"><span>⇧</span><span><strong>导入 .skillpack</strong><small>包含 SKILL.md 和辅助目录的 ZIP</small></span></button></div><input id="import-file" type="file" accept="application/json,.json" hidden><input id="import-pack-file" type="file" accept=".skillpack,.zip,application/zip" hidden></form></dialog>
+  <dialog id="confirm-dialog" class="extensions-menu-dialog"><form method="dialog"><div class="dialog-head"><h2 id="confirm-title">确认操作</h2><button value="cancel" aria-label="关闭">×</button></div><p id="confirm-copy"></p><div class="dialog-actions"><button value="cancel" class="secondary-action">取消</button><button id="confirm-accept" value="default" class="danger-action">确认</button></div></form></dialog>
+  <div id="extension-notice" class="notice" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

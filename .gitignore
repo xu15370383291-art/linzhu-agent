@@ -1,0 +1,62 @@
+# Private runtime data and local agent state
+.agent-data/
+.codex/
+
+# Environment secrets; keep the configuration example
+.env
+.env.*
+!.env.example
+
+# Local databases and SQLite sidecar files
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Private keys and certificate bundles
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Installed dependencies and build outputs
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Generated reports, screenshots and temporary test workspaces
+artifacts/
+.test-*/
+.external-read-root-*/
+playwright-report/
+test-results/
+blob-report/
+/test-output.txt
+/sandbox-ui-verification.txt
+
+# Python bytecode and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Logs and editor/OS metadata
+*.log
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini

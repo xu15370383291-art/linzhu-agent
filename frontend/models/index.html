@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型连接 | Personal Agent</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js?v=2" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar"><div class="brand"><span class="brand-mark">A<span>.</span></span><span>PERSONAL AGENT</span></div><span class="top-meta">本地配置 / 模型连接</span></header>
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="section-heading"><div><span class="kicker">CONNECTIONS</span><h1>模型连接</h1></div><button id="add" class="icon-button" aria-label="新增模型" title="新增模型">＋</button></div>
+        <div id="list" class="model-list"></div>
+        <div class="sidebar-foot"><span class="status-dot"></span> 配置仅存储在此设备</div>
+      </aside>
+      <section class="editor">
+        <div class="editor-head"><div><span class="kicker">MODEL SETTINGS</span><h2 id="heading">新增模型</h2><p>配置兼容 OpenAI Chat Completions 的接口</p></div><span id="active-badge" class="active-badge" hidden>当前使用</span></div>
+        <form id="form" autocomplete="off">
+          <div class="form-grid"><label>连接名称 <input name="name" required maxlength="80" placeholder="例如：工作用模型"></label><label>模型 ID <input name="model" required maxlength="160" placeholder="例如：gpt-4.1-mini"></label></div>
+          <div class="rule"></div>
+          <div class="field-title">接口设置</div>
+          <label>请求地址 <input name="url" type="url" required placeholder="https://api.example.com/v1"></label>
+          <label class="toggle-row"><input name="fullUrl" type="checkbox"><span class="toggle"></span><span>完整 URL</span><small id="url-hint">基础地址将自动拼接 /chat/completions</small></label>
+          <label class="toggle-row"><input name="streaming" type="checkbox" checked><span class="toggle"></span><span>流式输出</span><small>服务不支持时关闭</small></label>
+          <div class="form-grid"><label>上下文窗口（tokens） <input name="contextWindow" type="number" min="2048" step="1" placeholder="默认 32768"></label><label>输出预留（tokens） <input name="outputReserve" type="number" min="256" step="1" placeholder="默认 4096"></label></div>
+          <label>API Key <span id="key-state" class="label-note"></span><div class="secret-wrap"><input name="apiKey" type="password" placeholder="输入 API Key" spellcheck="false"><button id="reveal" type="button" class="reveal" aria-label="显示密钥" title="显示或隐藏密钥">◉</button></div></label>
+          <p class="notice">密钥不会显示在列表中。编辑时留空可保留原密钥；连接测试会向填写的地址发送请求。</p>
+          <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+          <div class="actions"><button type="submit" class="primary">保存连接</button><button type="button" id="test" class="secondary" disabled>测试连接</button><button type="button" id="select" class="secondary" disabled>设为当前</button><button type="button" id="remove" class="danger" disabled>删除</button></div>
+        </form>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

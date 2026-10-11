@@ -1,0 +1,35 @@
+{
+  "name": "personal-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node backend/cli.js",
+    "models": "node backend/model-server.js",
+    "models:fixed": "set MODEL_PORT=59161&& node backend/model-server.js",
+    "preview": "node backend/workbench/server.js",
+    "workbench": "node backend/workbench/workbench.js",
+    "preview:fixed": "set PORT=59160&& node backend/workbench/server.js",
+    "gateway": "node backend/gateway/host.js",
+    "gateway:background": "node backend/gateway/service.js",
+    "workbench:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-workbench.ps1",
+    "workbench:restart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart-workbench.ps1",
+    "clean:generated": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-generated.ps1",
+    "test:ui": "node scripts/test.js frontend",
+    "test:backend": "node scripts/test.js backend",
+    "perf:smoke": "node scripts/auto-eval.js smoke",
+    "perf:local": "node scripts/auto-eval.js local",
+    "perf:real": "node scripts/auto-eval.js real",
+    "perf:test": "node --test --test-concurrency=1 test/auto-eval.test.js test/performance-kit.test.js",
+    "test": "node scripts/test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "pdfjs-dist": "^6.3.289",
+    "playwright": "^1.63.0",
+    "yaml": "^2.9.1"
+  }
+}

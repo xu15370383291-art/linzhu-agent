@@ -1,0 +1,151 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, writeFile, mkdir, symlink } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { WslSandbox } from '../backend/sandbox/wsl.js';
+import { Workspace } from '../backend/workspace.js';
+import { PermissionPolicy } from '../backend/permissions/policy.js';
+import { routeTool } from '../backend/tools/registry.js';
+import { ExternalReads } from '../backend/tools/external-reads.js';
+
+test('WSL sandbox refuses unsupported paths and invalid commands', async () => {
+  const sandbox = new WslSandbox('\\\\server\\share');
+  await assert.rejects(sandbox.execute('pwd'), /local Windows drive/);
+  const local = new WslSandbox('D:\\somewhere');
+  await assert.rejects(local.execute('echo hi\nwhoami'), /Invalid sandbox command/);
+  await assert.rejects(local.execute('pwd', { timeoutMs: 999999 }), /Invalid sandbox timeout/);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(local.execute('pwd', { signal: controller.signal }), /cancelled|ENOENT/);
+});
+
+test('skill script runner snapshots files and mounts only a read-only offline skill directory', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'agent-skill-script-sandbox-'));
+  const sandbox = new WslSandbox(root, { snapshot: async (_target, action, options) => { assert.equal(options.mode, 'full'); return action(path.join(root, 'snapshot')); } });
+  let launchArgs; let program; let settings; let snapshotPath;
+  sandbox.launch = async (mounts, command, options) => { launchArgs = mounts; program = command; settings = options; return { exitCode: 0, stdout: 'OK', stderr: '' }; };
+  const result = await sandbox.executeSkillScript({ directory: root, scriptName: 'convert.py', input: "hello'; touch /tmp/escape", signal: new AbortController().signal });
+  assert.equal(result.sandboxed, true);
+  assert.equal(result.network, 'disabled');
+  assert.equal(result.filesystem, 'skill-snapshot-read-only');
+  assert.equal(launchArgs[0], '--ro-bind');
+  assert.equal(launchArgs.at(-1), '/skill');
+  assert.deepEqual(program, ['/bin/sh', '-c', program[2]]);
+  assert.match(program[2], /\/usr\/bin\/python3 '\/skill\/scripts\/convert\.py'/);
+  assert.equal(settings.timeoutMs, 5000);
+  void snapshotPath;
+  await import('node:fs/promises').then(fs => fs.rm(root, { recursive: true, force: true }));
+});
+
+test('WSL kernel isolation prevents host reads, workspace writes, network and process inheritance', { skip: process.env.AGENT_TEST_WSL !== '1' }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'agent-sandbox-'));
+  await mkdir(path.join(root, '.agent-data'));
+  await writeFile(path.join(root, '.agent-data', 'secret'), 'private');
+  await writeFile(path.join(root, '.env'), 'KEY=private');
+  await writeFile(path.join(root, 'visible.txt'), 'public');
+  await writeFile(path.join(root, 'many.txt'), 'first\nsecond\nthird');
+  await writeFile(path.join(root, 'unicode.txt'), '中'.repeat(35_000));
+  const sandbox = new WslSandbox(root);
+  assert.equal(await sandbox.verify(), true);
+  const result = await sandbox.execute('cat visible.txt; sh -c "test ! -e /mnt/c && test ! -e /init && test ! -s .env && test ! -e .agent-data/secret"');
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.match(result.stdout, /public/);
+  const write = await sandbox.execute('echo changed > visible.txt');
+  assert.notEqual(write.exitCode, 0);
+  assert.equal(await readFile(path.join(root, 'visible.txt'), 'utf8'), 'public');
+  await assert.rejects(sandbox.execute('sleep 20', { timeoutMs: 1000 }), /timed out/);
+  const limits = await sandbox.execute("python3 -c 'import resource,json; print(json.dumps([resource.getrlimit(x)[0] for x in [resource.RLIMIT_AS,resource.RLIMIT_CPU,resource.RLIMIT_NOFILE,resource.RLIMIT_FSIZE,resource.RLIMIT_CORE,resource.RLIMIT_NPROC]]))'");
+  assert.equal(limits.exitCode, 0, limits.stderr);
+  assert.deepEqual(JSON.parse(limits.stdout), [536870912, 10, 128, 8388608, 0, 64]);
+  const filtered = await sandbox.execute("python3 -c 'import ctypes,errno; c=ctypes.CDLL(None,use_errno=True); assert c.unshare(0x40000000)==-1 and ctypes.get_errno()==errno.EPERM; print(open(\"/proc/self/status\").read())'");
+  assert.equal(filtered.exitCode, 0, filtered.stderr);
+  assert.match(filtered.stdout, /NoNewPrivs:\s+1/);
+  assert.match(filtered.stdout, /Seccomp:\s+2/);
+  const memory = await sandbox.execute("python3 -c 'x=bytearray(800*1024*1024)'");
+  assert.notEqual(memory.exitCode, 0);
+  assert.match(memory.stderr, /MemoryError/);
+  const aggregate = await sandbox.execute("python3 -c 'import subprocess; p=[subprocess.Popen([\"python3\",\"-c\",\"import time;x=bytearray(240*1024*1024);time.sleep(3)\"]) for _ in range(3)]; assert all(x.wait()==0 for x in p)'");
+  assert.notEqual(aggregate.exitCode, 0, 'Aggregate memory quota must prevent three 240 MiB children');
+  await assert.rejects(sandbox.execute("python3 -c 'print(\"x\"*100000)'"), /output limit/);
+  const controller = new AbortController();
+  const pending = sandbox.execute('sleep 14', { signal: controller.signal });
+  const cancelTimer = setTimeout(() => controller.abort(), 1000);
+  try { await assert.rejects(pending, /cancelled/); }
+  finally { clearTimeout(cancelTimer); }
+  const background = await sandbox.execute('sleep 12 & echo done', { timeoutMs: 2000 });
+  assert.equal(background.exitCode, 0, background.stderr);
+  assert.match(background.stdout, /done/);
+  const policy = new PermissionPolicy({ sandboxReady: true, approveCommand: async () => true });
+  const routed = await routeTool({ function: { name: 'sandbox_command', arguments: '{"command":"cat visible.txt"}' } },
+    { workspace: new Workspace(root), policy, sandbox, allowedTools: new Set(['sandbox_command']) });
+  assert.equal(routed.isError, false, routed.content);
+  assert.match(JSON.parse(routed.content).stdout, /public/);
+  const isolated = new PermissionPolicy({ sandboxReady: true });
+  const isolatedWorkspace = new Workspace(root);
+  const invoke = (name, args) => routeTool({ function: { name, arguments: JSON.stringify(args) } },
+    { workspace: isolatedWorkspace, policy: isolated, sandbox });
+  const info = JSON.parse((await invoke('file_info', { path: 'visible.txt' })).content);
+  assert.equal(info.totalLines, 1);
+  assert.equal((await invoke('read_file', { path: 'visible.txt' })).content, 'public');
+  assert.equal((await invoke('read_file', { path: '.\\visible.txt' })).content, 'public');
+  assert.equal((await invoke('read_file', { path: 'unicode.txt' })).content, '中'.repeat(35_000));
+  const ranged = JSON.parse((await invoke('read_file', { path: 'many.txt', startLine: 2, lineCount: 1 })).content);
+  assert.deepEqual(ranged.lines, [{ line: 2, text: 'second' }]);
+  assert.equal(ranged.hasMore, true);
+  const first = JSON.parse((await invoke('list_files', { limit: 1 })).content);
+  assert.ok(first.nextCursor);
+  const second = JSON.parse((await invoke('list_files', { limit: 1, cursor: first.nextCursor })).content);
+  assert.notEqual(first.items[0].path, second.items[0].path);
+  const beforeChange = JSON.parse((await invoke('list_files', { limit: 1 })).content);
+  await writeFile(path.join(root, 'added.txt'), 'new');
+  const changed = await invoke('list_files', { limit: 1, cursor: beforeChange.nextCursor });
+  assert.equal(changed.isError, true);
+  assert.match(changed.content, /Directory changed/);
+  const found = JSON.parse((await invoke('find_files', { query: 'txt', limit: 1 })).content);
+  assert.ok(found.items.length);
+  const searched = JSON.parse((await invoke('search_text', { query: 'second', limit: 1 })).content);
+  assert.deepEqual(searched.matches.map(item => `${item.path}:${item.line}`), ['many.txt:2']);
+  try {
+    await symlink(path.join(root, '.agent-data', 'secret'), path.join(root, 'linked.txt'));
+    await assert.rejects(sandbox.readOperation('read_file', { path: 'linked.txt' }), /Reparse|linked workspace paths/);
+  } catch (error) {
+    if (error.code !== 'EPERM') throw error;
+  }
+  assert.equal((await invoke('read_file', { path: '.agent-data/secret' })).errorCode, 'WORKSPACE_ACCESS_DENIED');
+  assert.equal((await invoke('read_file', { path: '../visible.txt' })).errorCode, 'WORKSPACE_ACCESS_DENIED');
+  await mkdir(path.join(root, 'large-directory'));
+  await writeFile(path.join(root, 'large-directory', 'large.bin'), Buffer.alloc(2_000_001));
+  await writeFile(path.join(root, 'large-directory', 'small.txt'), 'small needle');
+  const largeList = await invoke('list_files', { path: 'large-directory' });
+  assert.equal(largeList.isError, false, largeList.content);
+  assert.deepEqual(JSON.parse(largeList.content).items.map(item => item.path), ['large-directory/large.bin', 'large-directory/small.txt']);
+  assert.equal((await invoke('read_file', { path: 'large-directory/small.txt' })).content, 'small needle');
+  const largeInfo = JSON.parse((await invoke('file_info', { path: 'large-directory/large.bin' })).content);
+  assert.equal(largeInfo.sizeBytes, 2_000_001);
+  assert.equal(largeInfo.totalLines, null);
+  const smallSearch = await invoke('search_text', { path: 'large-directory', query: 'needle' });
+  assert.equal(smallSearch.isError, false, smallSearch.content);
+  assert.equal(JSON.parse(smallSearch.content).matches[0].path, 'large-directory/small.txt');
+  assert.equal(await sandbox.verify(), true);
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'agent-external-sandbox-'));
+  const approved = path.join(outside, 'approved.txt');
+  await writeFile(approved, 'approved only');
+  await writeFile(path.join(outside, 'sibling.txt'), 'not approved');
+  assert.equal(await sandbox.readExternal('read_file', { path: approved }, approved), 'approved only');
+  const directory = await sandbox.readExternal('list_files', { path: outside, limit: 10 }, outside);
+  assert.deepEqual(directory.items.map(item => item.path), ['approved.txt', 'sibling.txt']);
+  let approvals = 0;
+  const externalReads = new ExternalReads({ approve: async () => { approvals++; return approvals !== 1; } });
+  const externalPolicy = new PermissionPolicy({ sandboxReady: true });
+  const externalCall = (name, args) => routeTool({ function: { name, arguments: JSON.stringify(args) } },
+    { workspace: isolatedWorkspace, policy: externalPolicy, sandbox, externalReads });
+  assert.equal((await externalCall('external_read_file', { path: approved })).errorCode, 'USER_DENIED');
+  assert.equal((await externalCall('external_read_file', { path: approved })).content, 'approved only');
+  const pageOne = JSON.parse((await externalCall('external_list_files', { path: outside, limit: 1 })).content);
+  assert.equal(pageOne.items[0].path, approved);
+  assert.ok(pageOne.nextCursor);
+  const pageTwo = JSON.parse((await externalCall('external_list_files', { path: outside, limit: 1, cursor: pageOne.nextCursor })).content);
+  assert.equal(pageTwo.items[0].path, path.join(outside, 'sibling.txt'));
+  assert.equal(approvals, 4);
+});
